@@ -1,0 +1,73 @@
+sequenceDiagram
+    autonumber
+    actor C as Cliente
+    participant SPA as React SPA
+    participant SF as JwtAuthFilter
+    participant CC as CitaController
+    participant CS as CitaService
+    participant HR as HorarioRepository
+    participant CR as CitaRepository
+    participant DB as PostgreSQL
+    participant EV as CitaEventListener
+    participant MSG as Proveedor mensajería
+
+    C->>SPA: Elige servicio, profesional, fecha y hora, y pulsa Confirmar
+    SPA->>SF: POST /api/v1/citas (JWT + SolicitudCitaDTO)
+
+    alt Token ausente, vencido o inválido
+        SF-->>SPA: 401 Unauthorized
+        SPA-->>C: Sesión expirada, inicia sesión de nuevo
+    else Token válido
+        SF->>CC: Petición autenticada (rol CLIENTE o RECEPCIONISTA)
+        CC->>CC: Valida el DTO con @Valid
+
+        alt DTO con campos inválidos
+            CC-->>SPA: 400 Bad Request
+            SPA-->>C: Muestra los campos con error
+        else DTO válido
+            CC->>CS: reservar(solicitud)
+            CS->>HR: buscarVigente(profesional, fecha)
+            HR->>DB: SELECT horario
+            DB-->>HR: Horario laboral
+            HR-->>CS: Horario
+
+            alt Fecha pasada o franja fuera del horario o en descanso
+                CS-->>CC: ReglaNegocioException
+                CC-->>SPA: 422 Unprocessable Entity
+                SPA-->>C: La franja no es válida, elige otra
+            else Franja dentro del horario
+                CS->>CR: contarSolapamientos(profesional, inicio, fin)
+                CR->>DB: SELECT COUNT citas activas que se cruzan
+                DB-->>CR: Cantidad
+                CR-->>CS: Cantidad
+
+                alt Ya existe una cita en esa franja
+                    CS-->>CC: ConflictoAgendaException
+                    CC-->>SPA: 409 Conflict
+                    SPA-->>C: Otra persona tomó la hora, recargando franjas
+                else Franja libre
+                    CS->>CR: save(Cita en estado PROGRAMADA + detalles)
+                    CR->>DB: INSERT cita y detalle_cita
+
+                    alt Restricción EXCLUDE violada (dos reservas simultáneas)
+                        DB-->>CR: Error exclusion_violation
+                        CR-->>CS: DataIntegrityViolationException
+                        CS-->>CC: ConflictoAgendaException
+                        CC-->>SPA: 409 Conflict
+                        SPA-->>C: Otra persona tomó la hora, recargando franjas
+                    else Inserción exitosa
+                        DB-->>CR: Cita guardada
+                        CR-->>CS: Cita
+                        CS-->>CC: CitaDTO
+                        CC-->>SPA: 201 Created
+                        SPA-->>C: Cita confirmada
+                        CS-)EV: Publica CitaCreadaEvent
+                        opt Después del commit de la transacción
+                            EV->>MSG: Enviar confirmación y programar recordatorios
+                            MSG-->>EV: Estado del envío
+                        end
+                    end
+                end
+            end
+        end
+    end

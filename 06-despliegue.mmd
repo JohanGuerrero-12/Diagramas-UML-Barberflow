@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph DISP["Dispositivo del usuario"]
+        nav["<b>Navegador web / PWA</b><br/>Chrome, Edge, Firefox o Safari"]
+    end
+
+    subgraph VPS["Nodo: Servidor VPS (Ubuntu 22.04 LTS)"]
+        fw["<b>Firewall (ufw)</b><br/>Abiertos: 80, 443 y 22 (SSH)"]
+
+        subgraph DOCKER["Docker Engine: red interna barberflow-net"]
+            proxy["<b>Contenedor proxy</b><br/>Nginx + Certbot (SSL Let's Encrypt)<br/>Puertos 80 y 443"]
+            front["<b>Contenedor frontend</b><br/>Nginx con el build de React<br/>Puerto interno 80"]
+            back["<b>Contenedor backend</b><br/>Spring Boot 3 sobre Java 17<br/>Puerto interno 8080"]
+            dbc[("<b>Contenedor postgres</b><br/>PostgreSQL 16<br/>Puerto interno 5432")]
+        end
+
+        vol[("Volumen Docker<br/>pgdata")]
+        bk["<b>Tarea programada (cron)</b><br/>pg_dump diario, retención 30 días"]
+    end
+
+    subgraph EXT["Servicios externos"]
+        store["Almacenamiento de respaldos<br/>(fuera del servidor)"]
+        msg["Proveedor de mensajería"]
+        pay["Pasarela de pagos"]
+    end
+
+    nav -->|"HTTPS 443 (TLS 1.2 o superior)"| fw
+    fw --> proxy
+    proxy -->|"HTTP: /"| front
+    proxy -->|"HTTP: /api/*"| back
+    back -->|"JDBC 5432"| dbc
+    dbc --- vol
+    bk -->|"Lee la base"| dbc
+    bk -->|"Copia cifrada"| store
+    back -->|"HTTPS / REST"| msg
+    back -->|"HTTPS / REST"| pay
+
+    classDef cont fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef datos fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef ext fill:#999,stroke:#6b6b6b,color:#fff
+    class proxy,front,back cont
+    class dbc,vol datos
+    class store,msg,pay ext

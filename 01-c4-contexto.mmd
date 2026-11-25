@@ -1,0 +1,29 @@
+flowchart TB
+    cliente["<b>Cliente</b><br/>[Persona]<br/>Reserva citas, consulta su historial y puntos"]
+    prof["<b>Profesional</b><br/>[Persona]<br/>Barbero o estilista: gestiona su agenda y ve sus comisiones"]
+    recep["<b>Recepcionista</b><br/>[Persona]<br/>Reserva en nombre del cliente y registra pagos"]
+    prop["<b>Propietario / Administrador</b><br/>[Persona]<br/>Configura el negocio y consulta reportes"]
+    inv["<b>Responsable de inventario</b><br/>[Persona]<br/>Controla insumos y alertas de stock"]
+    plat["<b>Administrador de plataforma</b><br/>[Persona]<br/>Administra los establecimientos suscritos"]
+
+    bf["<b>BarberFlow</b><br/>[Sistema de software]<br/>Gestión integral de citas, pagos, comisiones,<br/>inventario y fidelización"]
+
+    msg["<b>Proveedor de mensajería</b><br/>[Sistema externo]<br/>Envía correos y mensajes de texto"]
+    pay["<b>Pasarela de pagos</b><br/>[Sistema externo]<br/>Procesa pagos electrónicos"]
+
+    cliente -->|"Reserva y consulta"| bf
+    prof -->|"Gestiona agenda y atención"| bf
+    recep -->|"Agenda y cobra"| bf
+    prop -->|"Configura y consulta reportes"| bf
+    inv -->|"Registra entradas de insumos"| bf
+    plat -->|"Administra establecimientos"| bf
+
+    bf -->|"Envía confirmaciones y recordatorios<br/>[HTTPS / API REST]"| msg
+    bf -->|"Solicita cobros electrónicos<br/>[HTTPS / API REST]"| pay
+
+    classDef persona fill:#08427b,stroke:#052e56,color:#fff
+    classDef sistema fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef externo fill:#999,stroke:#6b6b6b,color:#fff
+    class cliente,prof,recep,prop,inv,plat persona
+    class bf sistema
+    class msg,pay externo

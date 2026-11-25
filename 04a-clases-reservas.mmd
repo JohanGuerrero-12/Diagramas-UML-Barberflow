@@ -1,0 +1,140 @@
+classDiagram
+    direction TB
+
+    class Usuario {
+        <<abstract>>
+        -Long idUsuario
+        -String nombres
+        -String apellidos
+        -String correo
+        -String telefono
+        -String hashClave
+        -RolUsuario rol
+        -EstadoUsuario estado
+        -LocalDateTime fechaRegistro
+        +cambiarClave(String nueva) void
+        +bloquear() void
+        +estaActivo() boolean
+    }
+    class Cliente {
+        -LocalDate fechaNacimiento
+        -String preferencias
+    }
+    class Profesional {
+        -String especialidad
+        -BigDecimal calificacionPromedio
+        -boolean activo
+        +estaDisponible(LocalDateTime inicio, LocalDateTime fin) boolean
+        +darDeBaja() void
+    }
+    class Administrador {
+        -CargoAdministrativo cargo
+    }
+    class Establecimiento {
+        -Long idEstablecimiento
+        -String nombre
+        -String nit
+        -TipoNegocio tipo
+        -String direccion
+        -String ciudad
+        -String telefono
+        -String zonaHoraria
+        -int anticipacionMinHoras
+        -EstadoEstablecimiento estado
+        +activar() void
+        +suspender() void
+    }
+    class Servicio {
+        -Long idServicio
+        -String nombre
+        -CategoriaServicio categoria
+        -String descripcion
+        -int duracionMin
+        -BigDecimal precio
+        -boolean activo
+        +actualizarTarifa(BigDecimal precio) void
+        +desactivar() void
+    }
+    class Horario {
+        -Long idHorario
+        -DayOfWeek diaSemana
+        -LocalTime horaInicio
+        -LocalTime horaFin
+        -LocalTime descansoInicio
+        -LocalTime descansoFin
+        -LocalDate vigenteDesde
+        +contieneFranja(LocalTime inicio, LocalTime fin) boolean
+    }
+    class Cita {
+        -Long idCita
+        -LocalDateTime fechaHoraInicio
+        -LocalDateTime fechaHoraFin
+        -EstadoCita estado
+        -BigDecimal valorEstimado
+        -String observaciones
+        -LocalDateTime fechaCreacion
+        +agregarDetalle(Servicio s) void
+        +calcularDuracion() int
+        +cambiarEstado(EstadoCita nuevo) void
+        +cancelar(String motivo) void
+        +iniciarAtencion() void
+        +finalizar() void
+    }
+    class DetalleCita {
+        -Long idDetalle
+        -BigDecimal precioAplicado
+        -int duracionMin
+        +calcularSubtotal() BigDecimal
+    }
+    class Notificacion {
+        -Long idNotificacion
+        -TipoNotificacion tipo
+        -CanalEnvio canal
+        -String mensaje
+        -LocalDateTime fechaProgramada
+        -EstadoEnvio estadoEnvio
+        -int intentos
+        +reintentar() void
+    }
+    class EstadoCita {
+        <<enumeration>>
+        PROGRAMADA
+        CONFIRMADA
+        EN_ATENCION
+        FINALIZADA
+        CANCELADA
+        NO_ASISTIO
+    }
+    class RolUsuario {
+        <<enumeration>>
+        CLIENTE
+        PROFESIONAL
+        ADMINISTRADOR
+    }
+    class CargoAdministrativo {
+        <<enumeration>>
+        PROPIETARIO
+        RECEPCIONISTA
+        RESPONSABLE_INVENTARIO
+        ADMIN_PLATAFORMA
+    }
+
+    Usuario <|-- Cliente
+    Usuario <|-- Profesional
+    Usuario <|-- Administrador
+
+    Establecimiento "1" --> "0..*" Profesional : emplea
+    Establecimiento "1" --> "0..*" Administrador : administra
+    Establecimiento "1" --> "0..*" Servicio : ofrece
+    Profesional "1" --> "1..*" Horario : define
+    Cliente "1" --> "0..*" Cita : solicita
+    Profesional "1" --> "0..*" Cita : atiende
+    Establecimiento "1" --> "0..*" Cita : recibe
+    Cita "1" *-- "1..*" DetalleCita : se compone de
+    DetalleCita "0..*" --> "1" Servicio : refiere a
+    Cita "1" --> "0..*" Notificacion : genera
+    Profesional "0..*" --> "0..*" Servicio : presta (N:M)
+
+    Cita ..> EstadoCita
+    Usuario ..> RolUsuario
+    Administrador ..> CargoAdministrativo

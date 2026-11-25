@@ -1,0 +1,29 @@
+flowchart TB
+    usuarios["<b>Usuarios de BarberFlow</b><br/>[Personas]<br/>Cliente, profesional, recepcionista,<br/>propietario, inventario, admin plataforma"]
+
+    subgraph BF["Sistema BarberFlow (servidor VPS con Docker)"]
+        proxy["<b>Proxy inverso</b><br/>[Nginx + SSL Let's Encrypt]<br/>Termina HTTPS y enruta el tráfico"]
+        spa["<b>Aplicación web (SPA / PWA)</b><br/>[React + Vite, servida por Nginx]<br/>Portales por rol, funciona en móvil y escritorio"]
+        api["<b>API REST</b><br/>[Java 17 + Spring Boot 3]<br/>Reglas de negocio, seguridad JWT y acceso a datos"]
+        db[("<b>Base de datos</b><br/>[PostgreSQL 16]<br/>Citas, pagos, comisiones,<br/>inventario y fidelización")]
+    end
+
+    msg["<b>Proveedor de mensajería</b><br/>[Sistema externo]"]
+    pay["<b>Pasarela de pagos</b><br/>[Sistema externo]"]
+
+    usuarios -->|"Navegador<br/>[HTTPS 443]"| proxy
+    proxy -->|"Entrega la SPA<br/>[HTTP]"| spa
+    proxy -->|"Rutas /api/*<br/>[HTTP / JSON]"| api
+    spa -.->|"Llamadas desde el navegador<br/>[HTTPS / JSON + JWT]"| proxy
+    api -->|"Lee y escribe<br/>[JDBC / SQL, puerto 5432]"| db
+    api -->|"Envía notificaciones<br/>[HTTPS / REST]"| msg
+    api -->|"Solicita cobros<br/>[HTTPS / REST]"| pay
+
+    classDef persona fill:#08427b,stroke:#052e56,color:#fff
+    classDef cont fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef datos fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef externo fill:#999,stroke:#6b6b6b,color:#fff
+    class usuarios persona
+    class proxy,spa,api cont
+    class db datos
+    class msg,pay externo

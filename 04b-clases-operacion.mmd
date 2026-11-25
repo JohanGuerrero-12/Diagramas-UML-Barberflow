@@ -1,0 +1,157 @@
+classDiagram
+    direction TB
+
+    class Cita { <<Vista A>> }
+    class Cliente { <<Vista A>> }
+    class Profesional { <<Vista A>> }
+    class Servicio { <<Vista A>> }
+    class Establecimiento { <<Vista A>> }
+
+    class Pago {
+        -Long idPago
+        -BigDecimal subtotal
+        -BigDecimal descuento
+        -BigDecimal valorCobrado
+        -MetodoPago metodoPago
+        -String referencia
+        -LocalDateTime fechaPago
+        -EstadoPago estado
+        +aplicarDescuento(Promocion p) void
+        +anular(String motivo) void
+    }
+    class Promocion {
+        -Long idPromocion
+        -String codigo
+        -TipoDescuento tipoDescuento
+        -BigDecimal valor
+        -LocalDate vigenciaDesde
+        -LocalDate vigenciaHasta
+        -boolean activa
+        +estaVigente(LocalDate f) boolean
+        +calcularDescuento(BigDecimal subtotal) BigDecimal
+    }
+    class Transaccion {
+        -Long idTransaccion
+        -TipoTransaccion tipo
+        -String concepto
+        -BigDecimal monto
+        -LocalDateTime fecha
+    }
+    class ReglaComision {
+        -Long idRegla
+        -BigDecimal porcentajeProfesional
+        -BigDecimal porcentajeEstablecimiento
+        -boolean descontarInsumos
+        -LocalDate vigenteDesde
+        -LocalDate vigenteHasta
+        +validarSuma100() boolean
+        +calcular(BigDecimal cobrado, BigDecimal insumos) ResultadoComision
+    }
+    class Comision {
+        -Long idComision
+        -BigDecimal baseComision
+        -BigDecimal costoInsumos
+        -BigDecimal valorProfesional
+        -BigDecimal valorEstablecimiento
+        -EstadoLiq estadoLiquidacion
+        +liquidar() void
+    }
+    class Fidelizacion {
+        -Long idFidelizacion
+        -int puntosAcumulados
+        -int puntosRedimidos
+        -NivelFidelidad nivel
+        +acumularPuntos(BigDecimal valorCobrado) int
+        +redimirPuntos(int puntos) BigDecimal
+        +consultarSaldo() int
+    }
+    class Inventario {
+        -Long idInventario
+        -String ubicacion
+        -LocalDate fechaUltimoConteo
+    }
+    class Insumo {
+        -Long idInsumo
+        -String nombre
+        -String unidadMedida
+        -BigDecimal existencias
+        -BigDecimal stockMinimo
+        -BigDecimal costoUnitario
+        -EstadoInsumo estado
+        +descontar(BigDecimal cantidad) boolean
+        +registrarEntrada(BigDecimal cantidad, BigDecimal costo) void
+        +estaBajoMinimo() boolean
+    }
+    class ServicioInsumo {
+        -BigDecimal cantidadEstandar
+    }
+    class ConsumoInsumo {
+        -Long idConsumo
+        -BigDecimal cantidad
+        -BigDecimal costoTotal
+        -LocalDateTime fechaConsumo
+    }
+    class MovimientoInventario {
+        -Long idMovimiento
+        -TipoMovimiento tipo
+        -BigDecimal cantidad
+        -BigDecimal saldoResultante
+        -LocalDateTime fecha
+    }
+    class EstadoPago {
+        <<enumeration>>
+        PENDIENTE
+        APROBADO
+        RECHAZADO
+        ANULADO
+    }
+    class MetodoPago {
+        <<enumeration>>
+        EFECTIVO
+        TARJETA
+        TRANSFERENCIA
+        BILLETERA
+    }
+    class TipoTransaccion {
+        <<enumeration>>
+        INGRESO
+        EGRESO
+        COMISION
+        AJUSTE
+    }
+    class EstadoLiq {
+        <<enumeration>>
+        PENDIENTE
+        LIQUIDADA
+    }
+    class TipoMovimiento {
+        <<enumeration>>
+        ENTRADA
+        CONSUMO
+        AJUSTE
+    }
+
+    Cita "1" --> "0..1" Pago : se cobra con
+    Pago "0..*" --> "0..1" Promocion : aplica
+    Pago "1" --> "0..*" Transaccion : registra
+    Pago "1" --> "1" Comision : genera
+    ReglaComision "1" --> "0..*" Comision : rige
+    Profesional "1" --> "0..*" Comision : percibe
+    Establecimiento "1" --> "0..*" ReglaComision : define
+    Cliente "1" --> "0..*" Fidelizacion : posee
+    Pago ..> Fidelizacion : acumula puntos
+
+    Establecimiento "1" --> "1" Inventario : posee (1:1)
+    Inventario "1" *-- "0..*" Insumo : contiene
+    Servicio "1" --> "0..*" ServicioInsumo : requiere
+    Insumo "1" --> "0..*" ServicioInsumo : receta (N:M)
+    Cita "1" --> "0..*" ConsumoInsumo : consume
+    Insumo "1" --> "0..*" ConsumoInsumo : se consume en
+    Insumo "1" --> "0..*" MovimientoInventario : historial
+    ConsumoInsumo "1" --> "0..1" MovimientoInventario : origina
+
+    Pago ..> EstadoPago
+    Pago ..> MetodoPago
+    Transaccion ..> TipoTransaccion
+    Comision ..> EstadoLiq
+    MovimientoInventario ..> TipoMovimiento

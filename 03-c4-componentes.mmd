@@ -1,0 +1,88 @@
+flowchart TB
+    spa["<b>SPA React</b><br/>[Contenedor]"]
+    db[("<b>PostgreSQL</b><br/>[Contenedor]")]
+    msg["<b>Proveedor de mensajería</b><br/>[Externo]"]
+    pay["<b>Pasarela de pagos</b><br/>[Externo]"]
+
+    subgraph API["Contenedor: API REST (Spring Boot)"]
+        direction TB
+
+        subgraph SEG["1. Seguridad"]
+            jwt["<b>JwtAuthenticationFilter</b><br/>Valida el token en cada petición"]
+            rbac["<b>SecurityConfig (RBAC)</b><br/>Permisos por rol y por establecimiento"]
+        end
+
+        subgraph CTRL["2. Controladores REST (paquete controller + dto)"]
+            cAuth["AuthController<br/>/api/v1/auth"]
+            cCita["CitaController<br/>/api/v1/citas"]
+            cDisp["DisponibilidadController<br/>/api/v1/disponibilidad"]
+            cPago["PagoController<br/>/api/v1/pagos"]
+            cInv["InventarioController<br/>/api/v1/insumos"]
+            cRep["ReporteController<br/>/api/v1/reportes"]
+        end
+
+        subgraph SRV["3. Servicios de negocio (paquete service)"]
+            sAuth["AuthService"]
+            sCita["CitaService"]
+            sDisp["DisponibilidadService"]
+            sPago["PagoService"]
+            sCom["ComisionService"]
+            sInv["InventarioService"]
+            sFid["FidelizacionService"]
+            sRep["ReporteService"]
+        end
+
+        subgraph EVT["4. Eventos (paquete event)"]
+            evt["<b>CitaEventListener</b><br/>Escucha CitaCreada, CitaCancelada<br/>y envía notificaciones tras el commit"]
+            sNot["NotificacionService"]
+        end
+
+        subgraph REPO["5. Repositorios (paquete repository, Spring Data JPA)"]
+            rCita["CitaRepository"]
+            rUsr["UsuarioRepository"]
+            rPago["PagoRepository"]
+            rIns["InsumoRepository"]
+            rOtros["Horario, Servicio, Comision,<br/>Fidelizacion Repository"]
+        end
+
+        geh["<b>GlobalExceptionHandler</b><br/>@RestControllerAdvice: traduce errores a 401, 403, 404, 409 y 422"]
+    end
+
+    spa -->|"HTTPS / JSON + JWT"| jwt
+    jwt --> rbac
+    rbac --> cAuth & cCita & cDisp & cPago & cInv & cRep
+
+    cAuth --> sAuth
+    cCita --> sCita
+    cDisp --> sDisp
+    cPago --> sPago
+    cInv --> sInv
+    cRep --> sRep
+
+    sCita --> sDisp
+    sPago --> sCom
+    sPago --> sInv
+    sPago --> sFid
+    sCita -.->|"publica evento"| evt
+    evt --> sNot
+
+    sAuth --> rUsr
+    sCita --> rCita
+    sDisp --> rCita
+    sPago --> rPago
+    sInv --> rIns
+    sCom --> rOtros
+    sFid --> rOtros
+    sRep --> rPago
+
+    rCita & rUsr & rPago & rIns & rOtros -->|"JDBC / SQL"| db
+    sNot -->|"HTTPS / REST"| msg
+    sPago -->|"HTTPS / REST"| pay
+
+    cCita & cPago & cInv -.->|"excepciones"| geh
+
+    classDef ext fill:#999,stroke:#6b6b6b,color:#fff
+    classDef comp fill:#85bbf0,stroke:#5d99c6,color:#000
+    classDef datos fill:#2e7d32,stroke:#1b5e20,color:#fff
+    class msg,pay,spa ext
+    class db datos
