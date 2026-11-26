@@ -216,6 +216,8 @@ classDiagram
         -String hashClave
         -RolUsuario rol
         -EstadoUsuario estado
+        -int intentosFallidos
+        -LocalDateTime bloqueadoHasta
         -LocalDateTime fechaRegistro
         +cambiarClave(String nueva) void
         +bloquear() void
@@ -224,12 +226,13 @@ classDiagram
     class Cliente {
         -LocalDate fechaNacimiento
         -String preferencias
+        -boolean autorizaTratamientoDatos
     }
     class Profesional {
         -String especialidad
         -BigDecimal calificacionPromedio
         -boolean activo
-        +estaDisponible(LocalDateTime inicio, LocalDateTime fin) boolean
+        +puedePrestar(Servicio s) boolean
         +darDeBaja() void
     }
     class Administrador {
@@ -277,6 +280,7 @@ classDiagram
         -EstadoCita estado
         -BigDecimal valorEstimado
         -String observaciones
+        -String motivoCancelacion
         -LocalDateTime fechaCreacion
         +agregarDetalle(Servicio s) void
         +calcularDuracion() int
@@ -645,3 +649,16 @@ flowchart TB
     class store,msg,pay ext
 ```
 
+
+---
+
+## 4. Persistencia: Diccionario de Datos y mapeo JPA
+
+| Entregable | Ubicación |
+|---|---|
+| Diccionario de Datos (22 tablas, 157 columnas, índices y anotaciones ORM) | [`diccionario-datos.md`](diccionario-datos.md) |
+| Esquema SQL (Flyway) con la restricción anti-solapamiento de citas | [`backend/src/main/resources/db/migration/V1__esquema_inicial.sql`](../../backend/src/main/resources/db/migration/V1__esquema_inicial.sql) |
+| Entidades `@Entity` (21) y enums | `backend/src/main/java/com/barberflow/domain/` |
+| Interfaces `JpaRepository` (20) | `backend/src/main/java/com/barberflow/repository/` |
+
+Buenas prácticas aplicadas: `FetchType.LAZY` en todas las relaciones, `@Enumerated(EnumType.STRING)`, índices declarados en `@Table(indexes = ...)`, dinero con `BigDecimal` / `NUMERIC(12,2)`, herencia `JOINED` para usuarios, composición `Cita` ◆ `DetalleCita` y `@EntityGraph` para evitar el problema N+1.
